@@ -5,6 +5,7 @@ cat events.txt | \
 sed -e 's/<tr><td class="DT">//' \
 -e's/<\/td><td class="DT">/,/' \
 -e's/<\/td><td class="Br">Brandweer<\/td><td class="Regio">Haaglanden<\/td><td class="Mdx*">/,/' \
+-e's/<\/td><td class="Br">Brandweer<\/td><td class="Regio">Rotterdam-Rijnmond<\/td><td class="Mdx*">/,/' \
 -e's/<\/td><\/tr>//' \
 -e 's/P . /&,/' \
 -e 's/BDH-.. /&,/' | \
