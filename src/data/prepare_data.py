@@ -1,8 +1,9 @@
 import pandas as pd
-import geopandas
+import geopandas as gpd
+import numpy as np
 def prepare_gdf(data):
     """
-	Prepare data and convert it to GeoDataFrame
+    Prepare data and convert it to GeoDataFrame
     
     Args:
         data (DataFrame) : Initial raw data set
@@ -10,7 +11,7 @@ def prepare_gdf(data):
     Returns:
         gdf (GeoDataFrame) : Data set with cleaned and converted coordinates
     
-	"""
+    """
     # Clean the coordinates
     data['pmeLatitude'] = data['pmeLatitude'].replace(to_replace='\\N', value=np.nan)
     data['pmeLongitude'] = data['pmeLongitude'].replace(to_replace='\\N', value=np.nan)
@@ -25,29 +26,61 @@ def prepare_gdf(data):
     gdf = gpd.GeoDataFrame(
         data, geometry=gpd.points_from_xy(data["pmeLongitude"], data["pmeLatitude"])
     )
+
     gdf.crs = {"init": "epsg:4326"}
 
     print(f"Total number of records collected with assigned coordinates : {gdf.shape[0]}")
     
     return gdf
-	
-def select_ny(df, year, delta=1):
-    """Select New Year's Eve period of a specific year
+
+def select_ny(data, year, delta=1):
+    """
+    Select New Year's Eve period of a specific year
     
     Args:
-        df (DataFrame) : Complete data set (not sliced by date)
+        data (DataFrame or GeoDataFrame) : Complete data set (not sliced by date)
         year (int) : Year of interest
         delta (int) : How many days +- take into account
     
     Returns:
-        df (DataFrame) : A subset of a specific year and delta
+        result (DataFrame or GeoDataFrame) : A subset of a specific year and delta
     """
-    begin = pd.to_datetime(str(year-1) + "-12-" + str(31 - delta))
-    end = pd.to_datetime(str(year) + "-01-" + str(1 + delta))
+    if year == 2017:
+        begin = pd.to_datetime("2017-01-01")
+        end = pd.to_datetime("2017-01-" + str(delta))
+        
+    else:
+        begin = pd.to_datetime(str(year-1) + "-12-" + str(31 - delta + 1))
+        end = pd.to_datetime(str(year) + "-01-" + str(1 + delta))
     
-    df = data[data["pmeTimeStamp"] > begin]
-    df = df[df["pmeTimeStamp"] < end]
+    result = data[data["pmeTimeStamp"] > begin]
+    result = result[result["pmeTimeStamp"] < end]
 
-    print(f"The number of firefigthers calls made from {begin} to {end} : {df.shape[0]}")
+    print(f"The number of firefigthers calls made from {begin} to {end} : {result.shape[0]}")
     
-    return df
+    return result
+
+def extract_categories(data, year, categories):
+    """
+    Extract call categories from the call messages
+    
+    Args:
+        data (DataFrame or GeoDataFrame) : Complete data set (not sliced by date)
+        year (int) : Year of interest
+        delta (int) : Catgories of interest
+    
+    Returns:
+        result (DataFrame or GeoDataFrame) : A subset of a specific year and categories
+    """
+    ny = select_ny(data, year)
+    j = []
+    l = []
+    for index, row in ny['pmeStrippedMessage'].iteritems():
+        for category in categories:
+            if category in row:
+                j.append(index)
+                l.append(category)
+                break
+    result = ny.loc[j,:]
+    result['pmeCategory'] = l
+    return result
